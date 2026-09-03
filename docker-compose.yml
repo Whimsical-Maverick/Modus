@@ -4,9 +4,9 @@ services:
     container_name: MODUS-DB
     environment:
       POSTGRES_DB: trackerdb
-      POSTGRES_USER: postgres
+      POSTGRES_USER: #add username
 
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: #add password
     ports:
       - "5432:5432"
     volumes:
