@@ -6,16 +6,16 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-
+import java.util.UUID;
 import java.time.Instant;
 
 @Entity
 @Getter @Setter
-@Table(name="User")
+@Table(name="users")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+    private UUID id;
 
     @Column(nullable=false)
     private String username;
