@@ -28,7 +28,8 @@ public class AuthService
         user.setUsername(request.fullName());
 
         User saved = userRepository.save(user);
-        return new UserResponse(saved.getId(), saved.getEmail(), saved.getUsername());
+        String id = saved.getId().toString();
+        return new UserResponse(id, saved.getEmail(), saved.getUsername());
 
     }
 
