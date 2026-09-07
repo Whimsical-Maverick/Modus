@@ -5,7 +5,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import java.util.UUID;
 
-@Entity
+//@Entity
 public class ActivityLog {
 
     @Id
