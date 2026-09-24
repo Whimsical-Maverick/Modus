@@ -5,8 +5,11 @@ import com.tracker.user.User;
 import com.tracker.user.UserRepository;
 import com.tracker.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -17,21 +20,26 @@ public class AuthService
 
     public UserResponse register(RegisterRequest  request)
     {
-        if(userRepository.ExistsByEmail(request.email()))
+        String email = request.email().trim().toLowerCase(Locale.ROOT);
+        if(userRepository.existsByEmail(email))
         {
             throw new EmailAlreadyExistsException(request.email());
         }
 
         User user = new User();
-        user.setEmail(request.email());
+        user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setUsername(request.fullName());
+        user.setUsername(request.username().trim());
 
-        User saved = userRepository.save(user);
+        User saved;
+        try {
+            saved = userRepository.saveAndFlush(user);
+        } catch (DataIntegrityViolationException ex) {
+            throw new EmailAlreadyExistsException(email);
+        }
         String id = saved.getId().toString();
         return new UserResponse(id, saved.getEmail(), saved.getUsername());
 
     }
 
 }
-
