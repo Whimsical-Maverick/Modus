@@ -1,3 +1,3 @@
 package com.tracker.user.dto;
 
-public record UserResponse(String id, String email, String fullName) {}
+public record UserResponse(String id, String email, String username) {}
