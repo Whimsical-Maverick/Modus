@@ -4,9 +4,13 @@ import com.tracker.auth.EmailAlreadyExistsException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -21,8 +25,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException ex) {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
         problem.setDetail("Validation failed");
-        // attach field errors here
+        Map<String, String> errors = new LinkedHashMap<>();
+        ex.getBindingResult().getFieldErrors().forEach(error ->
+                errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
+        problem.setProperty("errors", errors);
         return ResponseEntity.badRequest().body(problem);
     }
-}
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ProblemDetail> handleDataIntegrityViolation() {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setDetail("An account with that email already exists");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
+    }
+}
