@@ -1,5 +1,7 @@
 package com.tracker.auth;
 
+import com.tracker.auth.dto.AuthResponse;
+import com.tracker.auth.dto.LoginRequest;
 import com.tracker.auth.dto.RegisterRequest;
 import com.tracker.user.User;
 import com.tracker.user.UserRepository;
@@ -17,6 +19,8 @@ public class AuthService
 {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     public UserResponse register(RegisterRequest  request)
     {
@@ -42,4 +46,27 @@ public class AuthService
 
     }
 
+    public AuthResponse Login(LoginRequest request)
+    {
+        String email = request.email()
+                .trim()
+                .toLowerCase(Locale.ROOT);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(InvalidCredentialsException::new);
+
+        boolean passwordMatches = passwordEncoder.matches(
+                request.password(),
+                user.getPasswordHash()
+        );
+
+        if (!passwordMatches) {
+            throw new InvalidCredentialsException();
+        }
+
+        String accessToken = jwtService.generateAccessToken(user.getId());
+        String refreshToken = refreshTokenService.create(user);
+
+        return new AuthResponse(accessToken, refreshToken);
+    }
 }
