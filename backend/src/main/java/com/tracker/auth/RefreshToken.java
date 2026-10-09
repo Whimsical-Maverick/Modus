@@ -36,7 +36,5 @@ public class RefreshToken {
     @Column(name = "revoked_at")
     private Instant revokedAt;
 
-
-
 }
 
