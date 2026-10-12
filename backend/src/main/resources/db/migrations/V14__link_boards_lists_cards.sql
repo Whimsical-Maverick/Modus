@@ -4,7 +4,7 @@ BEGIN
         OR EXISTS(select 1 FROM card) THEN
         RAISE EXCEPTION
         'CANT LINK EXISTING board/board_list/card WITHOUT A BACKFILL'
-    END IF
+    END IF;
 END $$
 
 ALTER TABLE board
