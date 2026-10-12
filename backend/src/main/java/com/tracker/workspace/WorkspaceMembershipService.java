@@ -23,7 +23,7 @@ public class WorkspaceMembershipService {
         WorkspaceMember membership = requireMember(workspaceId, userId);
         if (membership.getRole() != WorkspaceRole.OWNER) {
             throw new ResponseStatusException(
-                    HttpStatus.FORBIDDEN, "Only workspace owners can add members");
+                    HttpStatus.FORBIDDEN, "Only workspace owners can perform this action");
         }
         return membership;
     }
