@@ -1,11 +1,14 @@
+-- Existing stub tables have no ownership information. If they contain rows,
+-- stop: those rows need an explicit backfill decision before adding NOT NULL FKs.
+DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM board)
         OR EXISTS(SELECT 1 FROM board_list)
         OR EXISTS(select 1 FROM card) THEN
         RAISE EXCEPTION
-        'CANT LINK EXISTING board/board_list/card WITHOUT A BACKFILL'
+        'CANT LINK EXISTING board/board_list/card WITHOUT A BACKFILL';
     END IF;
-END $$
+END $$;
 
 ALTER TABLE board
     ADD COLUMN workspace_id UUID NOT NULL,
