@@ -3,7 +3,6 @@ package com.tracker.workspace;
 import com.tracker.workspace.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -30,16 +29,6 @@ public class WorkspaceController
             @AuthenticationPrincipal UUID currentUserId
     ) {
         return workspaceService.get(workspaceId, currentUserId);
-    }
-
-    @PostMapping("/{workspaceId}/members")
-    public ResponseEntity<WorkspaceMemberResponse> addMember(
-            @PathVariable UUID workspaceId,
-            @Valid @RequestBody AddWorkspaceMemberRequest request,
-            @AuthenticationPrincipal UUID currentUserId
-    ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(workspaceService.addMember(workspaceId, currentUserId, request));
     }
 
     @PostMapping
