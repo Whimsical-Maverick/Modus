@@ -16,7 +16,8 @@ public interface WorkspaceInvitationRepository extends JpaRepository<WorkspaceIn
 
     @Query("select i from WorkspaceInvitation i join fetch i.workspace " +
             "join fetch i.invitedUser where i.invitedUser.id = :userId " +
-            "and i.status = :status order by i.createdAt desc")
+            "and i.status = :status and i.workspace.deletedAt is null " +
+            "order by i.createdAt desc")
     List<WorkspaceInvitation> findAllForUser(
             @Param("userId") UUID userId, @Param("status") InvitationStatus status);
 

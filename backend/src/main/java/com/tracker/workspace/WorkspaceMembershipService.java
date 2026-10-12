@@ -15,12 +15,25 @@ public class WorkspaceMembershipService {
 
     public WorkspaceMember requireMember(UUID workspaceId, UUID userId) {
         return workspaceMemberRepository.findByWorkspace_IdAndUser_Id(workspaceId, userId)
+                .filter(membership -> membership.getWorkspace().getDeletedAt() == null)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Workspace not found"));
     }
 
     public WorkspaceMember requireOwner(UUID workspaceId, UUID userId) {
         WorkspaceMember membership = requireMember(workspaceId, userId);
+        if (membership.getRole() != WorkspaceRole.OWNER) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN, "Only workspace owners can perform this action");
+        }
+        return membership;
+    }
+
+    public WorkspaceMember requireOwnerIncludingArchived(UUID workspaceId, UUID userId) {
+        WorkspaceMember membership = workspaceMemberRepository
+                .findByWorkspace_IdAndUser_Id(workspaceId, userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Workspace not found"));
         if (membership.getRole() != WorkspaceRole.OWNER) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "Only workspace owners can perform this action");

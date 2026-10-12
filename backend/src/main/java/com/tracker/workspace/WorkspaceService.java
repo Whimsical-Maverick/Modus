@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -55,6 +56,14 @@ public class WorkspaceService
                 .toList();
     }
 
+    public List<ArchivedWorkspaceResponse> listArchivedForOwner(UUID currentUserId) {
+        return workspaceRepository.findArchivedForUserAndRole(
+                        currentUserId, WorkspaceRole.OWNER).stream()
+                .map(workspace -> new ArchivedWorkspaceResponse(
+                        workspace.getId(), workspace.getName(), workspace.getDeletedAt()))
+                .toList();
+    }
+
     @Transactional
     public WorkspaceResponse get(UUID workspaceId, UUID currentUserId) {
         Workspace workspace = membershipService.requireMember(workspaceId, currentUserId)
@@ -74,6 +83,26 @@ public class WorkspaceService
 
         workspace.setName(request.name().trim());
 
+        return new WorkspaceResponse(workspace.getId(), workspace.getName());
+    }
+
+    @Transactional
+    public void archive(UUID workspaceId, UUID currentUserId) {
+        Workspace workspace = membershipService.requireOwner(workspaceId, currentUserId)
+                .getWorkspace();
+        workspace.setDeletedAt(Instant.now());
+    }
+
+    @Transactional
+    public WorkspaceResponse restore(UUID workspaceId, UUID currentUserId) {
+        Workspace workspace = membershipService
+                .requireOwnerIncludingArchived(workspaceId, currentUserId)
+                .getWorkspace();
+        if (workspace.getDeletedAt() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Workspace is not archived");
+        }
+        workspace.setDeletedAt(null);
         return new WorkspaceResponse(workspace.getId(), workspace.getName());
     }
 

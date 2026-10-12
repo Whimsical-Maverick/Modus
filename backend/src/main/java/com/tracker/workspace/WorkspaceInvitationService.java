@@ -138,6 +138,11 @@ public class WorkspaceInvitationService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Invitation not found"));
 
+        if (invitation.getWorkspace().getDeletedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Invitation not found");
+        }
+
         if (invitation.getStatus() != InvitationStatus.PENDING
                 || !invitation.getExpiresAt().isAfter(Instant.now())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,

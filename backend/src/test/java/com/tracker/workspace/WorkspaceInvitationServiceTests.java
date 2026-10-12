@@ -102,6 +102,23 @@ class WorkspaceInvitationServiceTests {
         verify(memberRepository, never()).saveAndFlush(any(WorkspaceMember.class));
     }
 
+    @Test
+    void invitationForArchivedWorkspaceCannotBeAccepted() {
+        UUID invitationId = UUID.randomUUID();
+        UUID inviteeId = UUID.randomUUID();
+        Workspace workspace = new Workspace();
+        workspace.setDeletedAt(Instant.now());
+        WorkspaceInvitation invitation = pendingInvitation(workspace,
+                user(inviteeId, "invitee@example.com"));
+        when(invitationRepository.findByIdForUpdate(invitationId))
+                .thenReturn(Optional.of(invitation));
+
+        assertThrows(ResponseStatusException.class,
+                () -> invitationService.accept(invitationId, inviteeId));
+
+        verify(memberRepository, never()).saveAndFlush(any(WorkspaceMember.class));
+    }
+
     private static User user(UUID id, String email) {
         User user = new User();
         user.setId(id);

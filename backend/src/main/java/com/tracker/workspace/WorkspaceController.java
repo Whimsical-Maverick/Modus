@@ -23,6 +23,12 @@ public class WorkspaceController
         return workspaceService.listForUser(currentUserId);
     }
 
+    @GetMapping("/archived")
+    public List<ArchivedWorkspaceResponse> listArchived(
+            @AuthenticationPrincipal UUID currentUserId) {
+        return workspaceService.listArchivedForOwner(currentUserId);
+    }
+
     @GetMapping("/{workspaceId}")
     public WorkspaceResponse get(
             @PathVariable UUID workspaceId,
@@ -50,6 +56,21 @@ public class WorkspaceController
             @AuthenticationPrincipal UUID currentUserId)
     {
         return workspaceService.rename(WorkspaceId,currentUserId,request);
+    }
+
+    @DeleteMapping("/{workspaceId}")
+    public ResponseEntity<Void> archive(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        workspaceService.archive(workspaceId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{workspaceId}/restore")
+    public WorkspaceResponse restore(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        return workspaceService.restore(workspaceId, currentUserId);
     }
 }
 
