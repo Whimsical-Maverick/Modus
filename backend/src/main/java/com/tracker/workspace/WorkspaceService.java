@@ -2,10 +2,7 @@ package com.tracker.workspace;
 
 import com.tracker.user.User;
 import com.tracker.user.UserRepository;
-import com.tracker.workspace.dto.AddWorkspaceMemberRequest;
-import com.tracker.workspace.dto.CreateWorkspaceRequest;
-import com.tracker.workspace.dto.WorkspaceMemberResponse;
-import com.tracker.workspace.dto.WorkspaceResponse;
+import com.tracker.workspace.dto.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -107,6 +104,21 @@ public class WorkspaceService
 
         return new WorkspaceMemberResponse(
                 newMember.getId(), newMember.getEmail(), membership.getRole());
+    }
+
+    @Transactional
+    public WorkspaceResponse rename(
+            UUID workspaceId,
+            UUID currentUserId,
+            RenameWorkspaceRequest request
+    ) {
+        Workspace workspace = membershipService
+                .requireOwner(workspaceId, currentUserId)
+                .getWorkspace();
+
+        workspace.setName(request.name().trim());
+
+        return new WorkspaceResponse(workspace.getId(), workspace.getName());
     }
 
 }
