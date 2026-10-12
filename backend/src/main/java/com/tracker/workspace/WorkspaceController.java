@@ -1,20 +1,12 @@
 package com.tracker.workspace;
 
-import com.tracker.workspace.dto.CreateWorkspaceRequest;
-import com.tracker.workspace.dto.AddWorkspaceMemberRequest;
-import com.tracker.workspace.dto.WorkspaceMemberResponse;
-import com.tracker.workspace.dto.WorkspaceResponse;
+import com.tracker.workspace.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.UUID;
@@ -60,6 +52,15 @@ public class WorkspaceController
         return ResponseEntity
                 .created(URI.create("/api/v1/workspaces/" + response.id()))
                 .body(response);
+    }
+
+    @PatchMapping
+    public WorkspaceResponse rename(
+            @PathVariable UUID WorkspaceId,
+            @Valid @RequestBody RenameWorkspaceRequest request,
+            @AuthenticationPrincipal UUID currentUserId)
+    {
+        return workspaceService.rename(WorkspaceId,currentUserId,request);
     }
 }
 
