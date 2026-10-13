@@ -1,18 +1,26 @@
 package com.tracker.card;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import com.tracker.board.BoardList;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
 @Entity
-@Table(name="card")
+@Getter
+@Setter
+@Table(name = "card")
 public class Card {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-}
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "list_id", nullable = false)
+    private BoardList list;
+
+    @Column(name = "title", nullable = false, length = 200)
+    private String title;
+}
