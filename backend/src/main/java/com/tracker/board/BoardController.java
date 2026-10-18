@@ -1,12 +1,48 @@
 package com.tracker.board;
 
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.tracker.board.dto.BoardListResponse;
+import com.tracker.board.dto.BoardResponse;
+import com.tracker.board.dto.CreateBoardListRequest;
+import com.tracker.board.dto.CreateBoardRequest;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
+import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/boards")
+@RequiredArgsConstructor
+@RequestMapping("/api/v1")
 public class BoardController
 {
+    private final BoardService boardService;
 
+    @PostMapping("/workspaces/{workspaceId}/boards")
+    public ResponseEntity<BoardResponse> createBoard(@PathVariable UUID workspaceId, @Valid @RequestBody CreateBoardRequest request,@AuthenticationPrincipal UUID currentUserId)
+    {
+        BoardResponse response =
+                boardService.createBoard(workspaceId, currentUserId, request);
+
+        return ResponseEntity
+                .created(URI.create("/api/v1/boards/" + response.id()))
+                .body(response);
+    }
+
+    @PostMapping("/boards/{boardId}/lists")
+    public ResponseEntity<BoardListResponse> createList(
+            @PathVariable UUID boardId,
+            @Valid @RequestBody CreateBoardListRequest request,
+            @AuthenticationPrincipal UUID currentUserId
+    ) {
+        BoardListResponse response =
+                boardService.createList(boardId, currentUserId, request);
+
+        return ResponseEntity
+                .created(URI.create("/api/v1/board-lists/" + response.id()))
+                .body(response);
+    }
 }
 
