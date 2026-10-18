@@ -49,13 +49,13 @@ public class WorkspaceController
                 .body(response);
     }
 
-    @PatchMapping
+    @PatchMapping("/{workspaceId}")
     public WorkspaceResponse rename(
-            @PathVariable UUID WorkspaceId,
+            @PathVariable UUID workspaceId,
             @Valid @RequestBody RenameWorkspaceRequest request,
             @AuthenticationPrincipal UUID currentUserId)
     {
-        return workspaceService.rename(WorkspaceId,currentUserId,request);
+        return workspaceService.rename(workspaceId,currentUserId,request);
     }
 
     @DeleteMapping("/{workspaceId}")
