@@ -1,4 +1,4 @@
-package com.tracker.board.dto;
+package com.tracker.card.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
