@@ -33,7 +33,7 @@ public class WorkspaceService
 
         Workspace workspace = new Workspace();
 
-        workspace.setName(request.Name().trim());
+        workspace.setName(request.name().trim());
 
         Workspace savedWorkspace = workspaceRepository.save(workspace);
 
