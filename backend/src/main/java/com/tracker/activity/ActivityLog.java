@@ -1,18 +1,26 @@
 package com.tracker.activity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
+@Getter
+@Setter
 @Entity
-@Table(name="activity_log")
+@Table(name = "activity_log")
 public class ActivityLog {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-}
 
+    private UUID boardId;
+    private UUID cardId;
+    private UUID actorUserId;
+    private String action;
+    private String description;
+    private Instant createdAt;
+}
