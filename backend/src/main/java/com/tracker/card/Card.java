@@ -23,4 +23,8 @@ public class Card {
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
+
+    @Version
+    @Column(name = "version",nullable=false)
+    private long version;
 }

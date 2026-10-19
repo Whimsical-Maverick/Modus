@@ -46,7 +46,8 @@ public class CardService {
         return new CardResponse(
                 saved.getId(),
                 listId,
-                saved.getTitle()
+                saved.getTitle(),
+                saved.getVersion()
         );
     }
 }
