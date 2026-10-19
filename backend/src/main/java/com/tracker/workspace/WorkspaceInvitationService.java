@@ -83,6 +83,18 @@ public class WorkspaceInvitationService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<WorkspaceInvitationResponse> listForWorkspace(
+            UUID workspaceId, UUID currentUserId) {
+        membershipService.requireOwner(workspaceId, currentUserId);
+        Instant now = Instant.now();
+        return invitationRepository.findAllForWorkspace(
+                        workspaceId, InvitationStatus.PENDING).stream()
+                .filter(invitation -> invitation.getExpiresAt().isAfter(now))
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional
     public void accept(UUID invitationId, UUID currentUserId) {
         WorkspaceInvitation invitation = requirePendingInvitationForUser(

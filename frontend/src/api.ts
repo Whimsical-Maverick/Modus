@@ -78,8 +78,13 @@ api.interceptors.response.use(undefined, async (error: unknown) => {
 
 export function errorMessage(error: unknown) {
   if (axios.isAxiosError(error)) {
-    const detail = (error.response?.data as { detail?: string } | undefined)?.detail
-    return detail || (error.response ? `Request failed (${error.response.status})` : 'Cannot reach the server')
+    const problem = error.response?.data as {
+      detail?: string; errors?: Record<string, string>
+    } | undefined
+    const fieldErrors = problem?.errors && Object.entries(problem.errors)
+      .map(([field, message]) => `${field}: ${message}`).join('; ')
+    return fieldErrors || problem?.detail ||
+      (error.response ? `Request failed (${error.response.status})` : 'Cannot reach the server')
   }
   return error instanceof Error ? error.message : 'Something went wrong'
 }

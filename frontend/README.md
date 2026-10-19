@@ -1,10 +1,10 @@
 # Modus frontend
 
-This is the first React/Vite client for the existing Spring Boot API. It includes registration, login, automatic access-token renewal, logout, workspace/board browsing, list and card creation, and live card-move updates.
+This React/Vite client includes registration, login, automatic access-token renewal, logout, workspace/board browsing, list and card creation, and live card-move updates. The Workspace screen also shows members and pending invitations, lets owners rename or archive a workspace, and lets owners invite registered users or revoke pending invitations. The Invitations screen lets invitees accept or decline; Archived lets owners restore; Activity shows the last 50 card-move log entries for a board.
 
 ## Run locally
 
-1. Start PostgreSQL and the backend (`D:\Modus\backend`) on port 8080. Flyway runs the refresh-token family migration at backend startup.
+1. Start PostgreSQL and the backend (`D:\Modus\backend`) on port 8080. Restart the backend after pulling these changes so the new read endpoints are available. Flyway runs migrations at backend startup.
 2. In `D:\Modus\frontend`, run `pnpm install`, then `pnpm dev`.
 3. Open **http://localhost:5173** (use `localhost`, not `127.0.0.1`, so the backend's development Origin check matches).
 
@@ -23,4 +23,14 @@ Opening multiple tabs is currently a limitation: refreshes in different tabs are
 
 ## Checks
 
-Run `pnpm build` for TypeScript and production bundling. Backend unit tests live in `D:\Modus\backend\src\test\java\com\tracker\auth`.
+Run `pnpm build` for TypeScript and production bundling. Backend unit tests live in `D:\Modus\backend\src\test\java\com\tracker`.
+
+## Try the management flow
+
+1. Register two accounts (for example, an owner and a teammate). Sign in as the owner and create a workspace.
+2. Open **Workspace** in the sidebar. Rename it, invite the teammate's registered email, and check the pending-invitation list. No email is sent by the current backend.
+3. Log out and sign in as the teammate. Open **Invitations**, then accept. The workspace now appears in the teammate's sidebar. The owner sees them in **Workspace → Members**.
+4. As the owner, archive the workspace. It disappears from active workspaces and is available in **Archived** for restoration.
+5. Move a card, then open **Activity** for that board and refresh after the background listener has recorded the move.
+
+Owners alone can send/revoke invitations, rename, archive, and restore. The backend checks those permissions; the frontend hides owner controls for ordinary members. The members endpoint is read-only—joining still requires invitation acceptance.

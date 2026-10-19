@@ -56,6 +56,21 @@ public class WorkspaceService
                 .toList();
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public WorkspaceRole roleForUser(UUID workspaceId, UUID currentUserId) {
+        return membershipService.requireMember(workspaceId, currentUserId).getRole();
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<WorkspaceMemberResponse> listMembers(UUID workspaceId, UUID currentUserId) {
+        membershipService.requireMember(workspaceId, currentUserId);
+        return workspaceMemberRepository.findMembersForWorkspace(workspaceId).stream()
+                .map(member -> new WorkspaceMemberResponse(
+                        member.getUser().getId(), member.getUser().getUsername(),
+                        member.getUser().getEmail(), member.getRole()))
+                .toList();
+    }
+
     public List<ArchivedWorkspaceResponse> listArchivedForOwner(UUID currentUserId) {
         return workspaceRepository.findArchivedForUserAndRole(
                         currentUserId, WorkspaceRole.OWNER).stream()

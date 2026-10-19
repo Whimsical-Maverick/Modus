@@ -37,6 +37,21 @@ public class WorkspaceController
         return workspaceService.get(workspaceId, currentUserId);
     }
 
+    @GetMapping("/{workspaceId}/membership")
+    public WorkspaceRoleResponse membership(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        return new WorkspaceRoleResponse(workspaceService.roleForUser(
+                workspaceId, currentUserId));
+    }
+
+    @GetMapping("/{workspaceId}/members")
+    public List<WorkspaceMemberResponse> members(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        return workspaceService.listMembers(workspaceId, currentUserId);
+    }
+
     @PostMapping
     public ResponseEntity<WorkspaceResponse> create(@Valid @RequestBody CreateWorkspaceRequest request
                                                     , @AuthenticationPrincipal UUID currentUserId)

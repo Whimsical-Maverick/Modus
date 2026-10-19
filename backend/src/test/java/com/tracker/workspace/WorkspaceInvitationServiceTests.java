@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -117,6 +118,30 @@ class WorkspaceInvitationServiceTests {
                 () -> invitationService.accept(invitationId, inviteeId));
 
         verify(memberRepository, never()).saveAndFlush(any(WorkspaceMember.class));
+    }
+
+    @Test
+    void ownerSeesOnlyUnexpiredSentInvitations() {
+        UUID workspaceId = UUID.randomUUID();
+        UUID ownerId = UUID.randomUUID();
+        Workspace workspace = new Workspace();
+        workspace.setId(workspaceId);
+        workspace.setName("Team");
+        WorkspaceInvitation pending = pendingInvitation(workspace,
+                user(UUID.randomUUID(), "current@example.com"));
+        pending.setId(UUID.randomUUID());
+        pending.setCreatedAt(Instant.now());
+        WorkspaceInvitation expired = pendingInvitation(workspace,
+                user(UUID.randomUUID(), "old@example.com"));
+        expired.setExpiresAt(Instant.now().minusSeconds(1));
+        when(invitationRepository.findAllForWorkspace(
+                workspaceId, InvitationStatus.PENDING)).thenReturn(List.of(pending, expired));
+
+        var result = invitationService.listForWorkspace(workspaceId, ownerId);
+
+        verify(membershipService).requireOwner(workspaceId, ownerId);
+        assertEquals(1, result.size());
+        assertEquals("current@example.com", result.get(0).invitedEmail());
     }
 
     private static User user(UUID id, String email) {

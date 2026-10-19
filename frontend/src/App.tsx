@@ -6,6 +6,9 @@ import {
   register, subscribeToAuth,
 } from './api'
 import type { BoardDetails, BoardSummary, Card, CardMovedEvent, Workspace } from './types'
+import { ArchivedWorkspaces, BoardActivity, InvitationInbox, WorkspaceSettings } from './WorkspaceHub'
+
+type View = 'board' | 'workspace' | 'inbox' | 'archived' | 'activity'
 
 function applyCardMove(board: BoardDetails, moved: Card): BoardDetails {
   if (!board.lists.some((list) => list.id === moved.listId)) return board
@@ -111,6 +114,19 @@ export default function App() {
   const [newBoard, setNewBoard] = useState('')
   const [newList, setNewList] = useState('')
   const [cardTitles, setCardTitles] = useState<Record<string, string>>({})
+  const [view, setView] = useState<View>('board')
+  const [workspaceRefresh, setWorkspaceRefresh] = useState(0)
+  const [liveConnected, setLiveConnected] = useState(false)
+  const selectedWorkspace = workspaces.find((workspace) => workspace.id === workspaceId)
+
+  function selectWorkspace(id: string) {
+    setBoards([]); setBoardId(null); setBoard(null)
+    setWorkspaceId(id); setView('board')
+  }
+
+  function selectBoard(id: string) {
+    setBoard(null); setBoardId(id); setView('board')
+  }
 
   useEffect(() => subscribeToAuth(setToken), [])
   useEffect(() => {
@@ -133,7 +149,7 @@ export default function App() {
       setWorkspaceId((current) => data.some((item) => item.id === current) ? current : data[0]?.id ?? null)
     }).catch((err: unknown) => { if (active) setError(errorMessage(err)) })
     return () => { active = false }
-  }, [token])
+  }, [token, workspaceRefresh])
 
   useEffect(() => {
     if (!workspaceId) { setBoards([]); setBoardId(null); return }
@@ -158,12 +174,14 @@ export default function App() {
   useEffect(() => {
     if (!boardId || !token) return
     let active = true
+    setLiveConnected(false)
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
     const client = new Client({
       brokerURL: `${scheme}://${window.location.host}/ws`,
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 5000,
       onConnect: () => {
+        if (active) setLiveConnected(true)
         client.subscribe(`/topic/board/${boardId}`, (message) => {
           const event = JSON.parse(message.body) as CardMovedEvent
           if (event.boardId !== boardId) return
@@ -180,10 +198,16 @@ export default function App() {
           if (active) setBoard((current) => mergeNewerMoves(data, current))
         }).catch((err: unknown) => { if (active) setError(errorMessage(err)) })
       },
-      onStompError: () => setError('Live updates disconnected. Reload the board if it looks out of date.'),
+      onWebSocketClose: () => { if (active) setLiveConnected(false) },
+      onStompError: () => {
+        if (active) {
+          setLiveConnected(false)
+          setError('Live updates disconnected. Reload the board if it looks out of date.')
+        }
+      },
     })
     client.activate()
-    return () => { active = false; void client.deactivate() }
+    return () => { active = false; setLiveConnected(false); void client.deactivate() }
   }, [boardId, token])
 
   async function createWorkspace(event: FormEvent<HTMLFormElement>) {
@@ -192,7 +216,7 @@ export default function App() {
     try {
       const { data } = await api.post<Workspace>('/workspaces', { name: newWorkspace.trim() })
       setWorkspaces((current) => [...current, data])
-      setWorkspaceId(data.id)
+      selectWorkspace(data.id)
       setNewWorkspace(''); setError('')
     } catch (err) { setError(errorMessage(err)) }
   }
@@ -203,7 +227,7 @@ export default function App() {
     try {
       const { data } = await api.post<BoardSummary>(`/workspaces/${workspaceId}/boards`, { name: newBoard.trim() })
       setBoards((current) => [...current, data])
-      setBoardId(data.id)
+      selectBoard(data.id)
       setNewBoard(''); setError('')
     } catch (err) { setError(errorMessage(err)) }
   }
@@ -269,7 +293,7 @@ export default function App() {
         <nav aria-label="Workspaces" className="nav-list">
           {workspaces.map((workspace) => <button key={workspace.id}
             className={`nav-item ${workspaceId === workspace.id ? 'selected' : ''}`}
-            onClick={() => setWorkspaceId(workspace.id)}>
+            onClick={() => selectWorkspace(workspace.id)}>
             <span className="nav-dot">{workspace.name.slice(0, 1).toUpperCase()}</span>{workspace.name}
           </button>)}
         </nav>
@@ -284,7 +308,7 @@ export default function App() {
           <nav aria-label="Boards" className="nav-list">
             {boards.map((item) => <button key={item.id}
               className={`nav-item board-nav ${boardId === item.id ? 'selected' : ''}`}
-              onClick={() => setBoardId(item.id)}>▦ <span>{item.name}</span></button>)}
+              onClick={() => selectBoard(item.id)}>▦ <span>{item.name}</span></button>)}
           </nav>
           <form className="sidebar-form" onSubmit={createBoard}>
             <label htmlFor="board-name">New board</label>
@@ -293,18 +317,50 @@ export default function App() {
               <button aria-label="Create board" type="submit">+</button></div>
           </form>
         </>}
+        <p className="sidebar-label boards-label">MORE</p>
+        <nav aria-label="More" className="nav-list utility-nav">
+          {workspaceId && <button className={`nav-item ${view === 'workspace' ? 'selected' : ''}`}
+            onClick={() => setView('workspace')}>⚙ <span>Workspace</span></button>}
+          <button className={`nav-item ${view === 'inbox' ? 'selected' : ''}`}
+            onClick={() => setView('inbox')}>✉ <span>Invitations</span></button>
+          <button className={`nav-item ${view === 'archived' ? 'selected' : ''}`}
+            onClick={() => setView('archived')}>▤ <span>Archived</span></button>
+          {boardId && <button className={`nav-item ${view === 'activity' ? 'selected' : ''}`}
+            onClick={() => setView('activity')}>◷ <span>Activity</span></button>}
+        </nav>
         <div className="sidebar-bottom"><span className="status-dot" /> Connected to your team
           <button className="logout-button" onClick={() => void logout().catch((err: unknown) => setError(errorMessage(err)))}>Log out ↗</button>
         </div>
       </aside>
       <main className="main-content">
         <header className="topbar">
-          <div><span className="breadcrumb">WORKSPACE / BOARD</span>
-            <h1>{board?.name ?? (workspaceId ? 'Choose a board' : 'Your workspace starts here')}</h1></div>
-          <span className="live-pill"><span className="status-dot" /> Live board</span>
+          <div><span className="breadcrumb">{view === 'board' ? 'WORKSPACE / BOARD' : 'MODUS / ' + view.toUpperCase()}</span>
+            <h1>{view === 'board' ? board?.name ?? (workspaceId ? 'Choose a board' : 'Your workspace starts here')
+              : view === 'workspace' ? selectedWorkspace?.name ?? 'Workspace'
+              : view === 'inbox' ? 'Invitations'
+              : view === 'archived' ? 'Archived workspaces' : 'Board activity'}</h1></div>
+          {view === 'board' && board && <span className={`live-pill ${liveConnected ? '' : 'offline'}`}>
+            <span className="status-dot" /> {liveConnected ? 'Live board' : 'Connecting…'}</span>}
         </header>
         {error && <div className="notice error page-notice" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
-        {board ? <>
+        {view === 'workspace' && workspaceId && selectedWorkspace ? <WorkspaceSettings
+          key={workspaceId} workspaceId={workspaceId} workspaceName={selectedWorkspace.name}
+          onRenamed={(name) => setWorkspaces((current) => current.map((item) =>
+            item.id === workspaceId ? { ...item, name } : item))}
+          onArchived={() => {
+            setWorkspaceId(null); setBoardId(null); setBoard(null)
+            setWorkspaceRefresh((current) => current + 1); setView('archived')
+          }} />
+        : view === 'inbox' ? <InvitationInbox onAccepted={(acceptedWorkspaceId) => {
+          selectWorkspace(acceptedWorkspaceId)
+          setWorkspaceRefresh((current) => current + 1)
+        }} />
+        : view === 'archived' ? <ArchivedWorkspaces onRestored={(restoredWorkspaceId) => {
+          selectWorkspace(restoredWorkspaceId)
+          setWorkspaceRefresh((current) => current + 1)
+        }} />
+        : view === 'activity' && boardId ? <BoardActivity boardId={boardId} />
+        : view === 'board' && board ? <>
           <div className="board-toolbar"><p>Move work from idea to done, together.</p><span>{board.lists.reduce((sum, list) => sum + list.cards.length, 0)} cards</span></div>
           <div className="board-columns">
             {board.lists.map((list) => <section key={list.id} className="board-column"

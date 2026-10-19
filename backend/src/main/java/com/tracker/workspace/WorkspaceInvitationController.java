@@ -41,6 +41,13 @@ public class WorkspaceInvitationController {
         return invitationService.listForUser(currentUserId);
     }
 
+    @GetMapping("/workspaces/{workspaceId}/invitations")
+    public List<WorkspaceInvitationResponse> listForWorkspace(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        return invitationService.listForWorkspace(workspaceId, currentUserId);
+    }
+
     @PostMapping("/workspace-invitations/{invitationId}/accept")
     public ResponseEntity<Void> accept(
             @PathVariable UUID invitationId,

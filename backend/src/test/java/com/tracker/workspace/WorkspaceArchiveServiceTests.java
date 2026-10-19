@@ -1,6 +1,7 @@
 package com.tracker.workspace;
 
 import com.tracker.user.UserRepository;
+import com.tracker.user.User;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class WorkspaceArchiveServiceTests {
@@ -82,6 +84,40 @@ class WorkspaceArchiveServiceTests {
 
         assertEquals(1, result.size());
         assertEquals(archived.getDeletedAt(), result.get(0).archivedAt());
+    }
+
+    @Test
+    void memberCanReadMemberListButCannotAssignAnyone() {
+        UUID workspaceId = UUID.randomUUID();
+        UUID viewerId = UUID.randomUUID();
+        WorkspaceMember member = membership(workspace(workspaceId));
+        User user = new User();
+        user.setId(viewerId);
+        user.setUsername("Bhavya");
+        user.setEmail("bhavya@example.com");
+        member.setUser(user);
+        member.setRole(WorkspaceRole.MEMBER);
+        when(membershipService.requireMember(workspaceId, viewerId)).thenReturn(member);
+        when(memberRepository.findMembersForWorkspace(workspaceId)).thenReturn(List.of(member));
+
+        var result = workspaceService.listMembers(workspaceId, viewerId);
+
+        assertEquals(1, result.size());
+        assertEquals("Bhavya", result.get(0).username());
+        assertEquals(WorkspaceRole.MEMBER,
+                workspaceService.roleForUser(workspaceId, viewerId));
+    }
+
+    @Test
+    void nonmemberCannotReadMemberList() {
+        UUID workspaceId = UUID.randomUUID();
+        UUID strangerId = UUID.randomUUID();
+        when(membershipService.requireMember(workspaceId, strangerId))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND));
+
+        assertThrows(ResponseStatusException.class,
+                () -> workspaceService.listMembers(workspaceId, strangerId));
+        verify(memberRepository, never()).findMembersForWorkspace(workspaceId);
     }
 
     private static Workspace workspace(UUID id) {
