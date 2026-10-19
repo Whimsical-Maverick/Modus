@@ -2,6 +2,7 @@ package com.tracker.common.exception;
 
 import com.tracker.auth.EmailAlreadyExistsException;
 import com.tracker.auth.InvalidCredentialsException;
+import com.tracker.auth.InvalidRefreshTokenException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -51,6 +52,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(problem);
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidRefreshToken() {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
+        problem.setDetail("Invalid or expired refresh token");
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problem);
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)

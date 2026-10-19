@@ -46,7 +46,7 @@ public class AuthService
 
     }
 
-    public AuthResponse Login(LoginRequest request)
+    public AuthResponse login(LoginRequest request)
     {
         String email = request.email()
                 .trim()
@@ -68,5 +68,19 @@ public class AuthService
         String refreshToken = refreshTokenService.create(user);
 
         return new AuthResponse(accessToken, refreshToken);
+    }
+
+    public AuthResponse refresh(String rawRefreshToken) {
+        RefreshTokenService.Rotation rotation =
+                refreshTokenService.rotate(rawRefreshToken);
+        return new AuthResponse(
+                jwtService.generateAccessToken(rotation.userId()),
+                rotation.refreshToken());
+    }
+
+    public void logout(String rawRefreshToken) {
+        if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
+            refreshTokenService.revokeFamily(rawRefreshToken);
+        }
     }
 }

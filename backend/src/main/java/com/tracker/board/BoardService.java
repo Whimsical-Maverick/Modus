@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.SQLException;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -23,6 +24,16 @@ public class BoardService
     private final BoardListRepository boardListRepository;
     private final WorkspaceMembershipService membershipService;
     private final CardRepository cardRepository;
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public List<BoardResponse> listBoards(UUID workspaceId, UUID currentUserId) {
+        membershipService.requireMember(workspaceId, currentUserId);
+        return boardRepository.findByWorkspace_IdOrderByNameAsc(workspaceId)
+                .stream()
+                .map(board -> new BoardResponse(
+                        board.getId(), workspaceId, board.getName()))
+                .toList();
+    }
 
     @Transactional
     public BoardResponse createBoard(UUID workspaceId, UUID currentUserId, CreateBoardRequest request)

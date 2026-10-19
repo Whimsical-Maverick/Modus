@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -16,6 +17,13 @@ import java.util.UUID;
 public class BoardController
 {
     private final BoardService boardService;
+
+    @GetMapping("/workspaces/{workspaceId}/boards")
+    public List<BoardResponse> listBoards(
+            @PathVariable UUID workspaceId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        return boardService.listBoards(workspaceId, currentUserId);
+    }
 
     @PostMapping("/workspaces/{workspaceId}/boards")
     public ResponseEntity<BoardResponse> createBoard(@PathVariable UUID workspaceId, @Valid @RequestBody CreateBoardRequest request,@AuthenticationPrincipal UUID currentUserId)
