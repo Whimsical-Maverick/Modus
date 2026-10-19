@@ -13,5 +13,6 @@ public record CardMovedEvent(UUID boardId,
                              String oldListName,
                              String newListName)
 {
+
 }
 

@@ -2,6 +2,7 @@ package com.tracker.common.exception;
 
 import com.tracker.auth.EmailAlreadyExistsException;
 import com.tracker.auth.InvalidCredentialsException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -50,5 +51,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.UNAUTHORIZED)
                 .body(problem);
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<ProblemDetail> handleOptimisticConflict() {
+        ProblemDetail problem =
+                ProblemDetail.forStatus(HttpStatus.CONFLICT);
+        problem.setDetail("Card has changed; reload it and try again");
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(problem);
     }
 }

@@ -2,6 +2,7 @@ package com.tracker.card;
 
 import com.tracker.card.dto.CardResponse;
 import com.tracker.card.dto.CreateCardRequest;
+import com.tracker.card.dto.MoveCardRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,14 @@ public class CardController
         return ResponseEntity
                 .created(URI.create("/api/v1/cards/" + response.id()))
                 .body(response);
+    }
+
+    @PatchMapping("/cards/{cardId}/move")
+    public CardResponse updateCard(@PathVariable UUID cardId,
+                                   @Valid @RequestBody MoveCardRequest request,
+                                   @AuthenticationPrincipal UUID currentUserId)
+    {
+        return cardService.moveCard(cardId, currentUserId, request);
     }
 }
 
