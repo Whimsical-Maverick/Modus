@@ -1,9 +1,8 @@
 package com.tracker.board;
 
-import com.tracker.board.dto.BoardListResponse;
-import com.tracker.board.dto.BoardResponse;
-import com.tracker.board.dto.CreateBoardListRequest;
-import com.tracker.board.dto.CreateBoardRequest;
+import com.tracker.board.dto.*;
+import com.tracker.card.CardRepository;
+import com.tracker.card.dto.CardResponse;
 import com.tracker.workspace.Workspace;
 import com.tracker.workspace.WorkspaceMembershipService;
 import jakarta.transaction.Transactional;
@@ -23,6 +22,7 @@ public class BoardService
     private final BoardRepository boardRepository;
     private final BoardListRepository boardListRepository;
     private final WorkspaceMembershipService membershipService;
+    private final CardRepository cardRepository;
 
     @Transactional
     public BoardResponse createBoard(UUID workspaceId, UUID currentUserId, CreateBoardRequest request)
@@ -78,6 +78,46 @@ public class BoardService
             throw ex;
         }
     }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public BoardDetailsResponse getBoard(UUID boardId, UUID currentUserId)
+    {
+        Board board = boardRepository.findById(boardId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Board not found"));
+
+        membershipService.requireMember(board.getWorkspace().getId(),currentUserId);
+
+        var cardsByList = cardRepository.findByList_Board_Id(boardId)
+                .stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        card -> card.getList().getId(),
+                        java.util.stream.Collectors.mapping(
+                                card -> new CardResponse(
+                                        card.getId(),
+                                        card.getList().getId(),
+                                        card.getTitle(),
+                                        card.getVersion()
+                                ),
+                                java.util.stream.Collectors.toList()
+                        )
+                ));
+
+        var lists = boardListRepository
+                .findByBoard_IdOrderBySortOrderAsc(boardId)
+                .stream()
+                .map(list -> new BoardDetailsResponse.ListDetails(
+                        list.getId(),
+                        list.getName(),
+                        list.getSortOrder(),
+                        cardsByList.getOrDefault(
+                                list.getId(),
+                                java.util.List.of()
+                        )
+                ))
+                .toList();
+
+        return new BoardDetailsResponse(board.getId(),board.getName(),lists);
+    }
+
 
 }
 

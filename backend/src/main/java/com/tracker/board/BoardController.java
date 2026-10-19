@@ -1,9 +1,6 @@
 package com.tracker.board;
 
-import com.tracker.board.dto.BoardListResponse;
-import com.tracker.board.dto.BoardResponse;
-import com.tracker.board.dto.CreateBoardListRequest;
-import com.tracker.board.dto.CreateBoardRequest;
+import com.tracker.board.dto.*;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +40,14 @@ public class BoardController
         return ResponseEntity
                 .created(URI.create("/api/v1/board-lists/" + response.id()))
                 .body(response);
+    }
+
+    @GetMapping("/boards/{boardId}")
+    public BoardDetailsResponse getBoard(
+            @PathVariable UUID boardId,
+            @AuthenticationPrincipal UUID currentUserId){
+
+        return boardService.getBoard(boardId, currentUserId);
     }
 }
 
