@@ -40,5 +40,13 @@ public class CardController
     {
         return cardService.moveCard(cardId, currentUserId, request);
     }
+
+    @DeleteMapping("/cards/{cardId}")
+    public ResponseEntity<Void> deleteCard(
+            @PathVariable UUID cardId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        cardService.deleteCard(cardId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
 }
 

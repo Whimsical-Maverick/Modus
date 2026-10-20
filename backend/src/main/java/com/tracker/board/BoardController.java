@@ -57,5 +57,21 @@ public class BoardController
 
         return boardService.getBoard(boardId, currentUserId);
     }
+
+    @DeleteMapping("/boards/{boardId}")
+    public ResponseEntity<Void> deleteBoard(
+            @PathVariable UUID boardId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        boardService.deleteBoard(boardId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/board-lists/{listId}")
+    public ResponseEntity<Void> deleteList(
+            @PathVariable UUID listId,
+            @AuthenticationPrincipal UUID currentUserId) {
+        boardService.deleteList(listId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
 }
 

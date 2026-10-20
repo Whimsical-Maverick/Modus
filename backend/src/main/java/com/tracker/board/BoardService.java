@@ -3,10 +3,13 @@ package com.tracker.board;
 import com.tracker.board.dto.*;
 import com.tracker.card.CardRepository;
 import com.tracker.card.dto.CardResponse;
+import com.tracker.activity.ActivityLogRepository;
+import com.tracker.realtime.events.BoardContentDeletedEvent;
 import com.tracker.workspace.Workspace;
 import com.tracker.workspace.WorkspaceMembershipService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -24,6 +27,32 @@ public class BoardService
     private final BoardListRepository boardListRepository;
     private final WorkspaceMembershipService membershipService;
     private final CardRepository cardRepository;
+    private final ActivityLogRepository activityLogRepository;
+    private final ApplicationEventPublisher eventPublisher;
+
+    @Transactional
+    public void deleteBoard(UUID boardId, UUID currentUserId) {
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found"));
+        membershipService.requireOwner(board.getWorkspace().getId(), currentUserId);
+
+        activityLogRepository.deleteByBoardId(boardId);
+        boardRepository.delete(board);
+        boardRepository.flush();
+        eventPublisher.publishEvent(new BoardContentDeletedEvent(boardId, "BOARD_DELETED", boardId));
+    }
+
+    @Transactional
+    public void deleteList(UUID listId, UUID currentUserId) {
+        BoardList list = boardListRepository.findById(listId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "List not found"));
+        UUID boardId = list.getBoard().getId();
+        membershipService.requireOwner(list.getBoard().getWorkspace().getId(), currentUserId);
+
+        boardListRepository.delete(list);
+        boardListRepository.flush();
+        eventPublisher.publishEvent(new BoardContentDeletedEvent(boardId, "LIST_DELETED", listId));
+    }
 
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<BoardResponse> listBoards(UUID workspaceId, UUID currentUserId) {

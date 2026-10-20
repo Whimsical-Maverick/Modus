@@ -1,6 +1,7 @@
 package com.tracker.realtime;
 
 import com.tracker.realtime.events.CardMovedEvent;
+import com.tracker.realtime.events.BoardContentDeletedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,11 @@ public class BoardEventPublisher
     public void onCardMoved(CardMovedEvent event)
     {
         messagingTemplate.convertAndSend("/topic/board/"+event.boardId(),event);
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void onContentDeleted(BoardContentDeletedEvent event) {
+        messagingTemplate.convertAndSend("/topic/board/" + event.boardId(), event);
     }
 }
 

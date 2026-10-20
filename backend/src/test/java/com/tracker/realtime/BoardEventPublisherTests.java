@@ -1,6 +1,7 @@
 package com.tracker.realtime;
 
 import com.tracker.realtime.events.CardMovedEvent;
+import com.tracker.realtime.events.BoardContentDeletedEvent;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -47,6 +48,25 @@ class BoardEventPublisherTests {
                 context.publishEvent(event());
                 complete(TransactionSynchronization.STATUS_ROLLED_BACK);
                 verifyNoInteractions(template);
+            } finally {
+                clearTransactionSynchronization();
+            }
+        }
+    }
+
+    @Test
+    void deleteEventBroadcastsOnlyAfterCommit() {
+        try (var context = new AnnotationConfigApplicationContext(TestConfig.class)) {
+            SimpMessagingTemplate template = context.getBean(SimpMessagingTemplate.class);
+            BoardContentDeletedEvent event = new BoardContentDeletedEvent(
+                    UUID.randomUUID(), "CARD_DELETED", UUID.randomUUID());
+
+            beginTransactionSynchronization();
+            try {
+                context.publishEvent(event);
+                verifyNoInteractions(template);
+                complete(TransactionSynchronization.STATUS_COMMITTED);
+                verify(template).convertAndSend("/topic/board/" + event.boardId(), event);
             } finally {
                 clearTransactionSynchronization();
             }

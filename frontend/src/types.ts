@@ -36,3 +36,9 @@ export type CardMovedEvent = {
   newListId: string
   version: number
 }
+
+export type BoardContentDeletedEvent = {
+  boardId: string
+  type: 'CARD_DELETED' | 'LIST_DELETED' | 'BOARD_DELETED'
+  entityId: string
+}

@@ -6,6 +6,7 @@ import com.tracker.card.dto.CardResponse;
 import com.tracker.card.dto.CreateCardRequest;
 import com.tracker.card.dto.MoveCardRequest;
 import com.tracker.realtime.events.CardMovedEvent;
+import com.tracker.realtime.events.BoardContentDeletedEvent;
 import com.tracker.user.UserRepository;
 import com.tracker.workspace.WorkspaceMembershipService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,19 @@ public class CardService {
     private final WorkspaceMembershipService membershipService;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
+
+    @Transactional
+    public void deleteCard(UUID cardId, UUID currentUserId) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Card not found"));
+        BoardList list = card.getList();
+        membershipService.requireMember(list.getBoard().getWorkspace().getId(), currentUserId);
+
+        cardRepository.delete(card);
+        cardRepository.flush();
+        eventPublisher.publishEvent(new BoardContentDeletedEvent(
+                list.getBoard().getId(), "CARD_DELETED", cardId));
+    }
 
     @Transactional
     public CardResponse createCard(

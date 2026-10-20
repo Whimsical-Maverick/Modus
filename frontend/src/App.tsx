@@ -5,10 +5,11 @@ import {
   api, errorMessage, getAccessToken, login, logout, refreshAccessToken,
   register, subscribeToAuth,
 } from './api'
-import type { BoardDetails, BoardSummary, Card, CardMovedEvent, Workspace } from './types'
+import type { BoardContentDeletedEvent, BoardDetails, BoardSummary, Card, CardMovedEvent, Workspace, WorkspaceRole } from './types'
 import { ArchivedWorkspaces, BoardActivity, InvitationInbox, WorkspaceSettings } from './WorkspaceHub'
 
 type View = 'board' | 'workspace' | 'inbox' | 'archived' | 'activity'
+type DeleteTarget = { kind: 'card' | 'list' | 'board'; id: string; name: string; count: number }
 
 function applyCardMove(board: BoardDetails, moved: Card): BoardDetails {
   if (!board.lists.some((list) => list.id === moved.listId)) return board
@@ -117,14 +118,27 @@ export default function App() {
   const [view, setView] = useState<View>('board')
   const [workspaceRefresh, setWorkspaceRefresh] = useState(0)
   const [liveConnected, setLiveConnected] = useState(false)
+  const [workspaceRole, setWorkspaceRole] = useState<WorkspaceRole | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const selectedWorkspace = workspaces.find((workspace) => workspace.id === workspaceId)
 
   function selectWorkspace(id: string) {
+    if (id === workspaceId) {
+      setDeleteTarget(null); setView('board')
+      return
+    }
     setBoards([]); setBoardId(null); setBoard(null)
+    setDeleteTarget(null); setWorkspaceRole(null)
     setWorkspaceId(id); setView('board')
   }
 
   function selectBoard(id: string) {
+    setDeleteTarget(null)
+    if (id === boardId) {
+      setView('board')
+      return
+    }
     setBoard(null); setBoardId(id); setView('board')
   }
 
@@ -153,6 +167,7 @@ export default function App() {
 
   useEffect(() => {
     if (!workspaceId) { setBoards([]); setBoardId(null); return }
+    if (view !== 'board') return
     let active = true
     api.get<BoardSummary[]>(`/workspaces/${workspaceId}/boards`).then(({ data }) => {
       if (!active) return
@@ -160,16 +175,27 @@ export default function App() {
       setBoardId((current) => data.some((item) => item.id === current) ? current : data[0]?.id ?? null)
     }).catch((err: unknown) => { if (active) setError(errorMessage(err)) })
     return () => { active = false }
+  }, [workspaceId, view])
+
+  useEffect(() => {
+    if (!workspaceId) { setWorkspaceRole(null); return }
+    let active = true
+    setWorkspaceRole(null)
+    api.get<{ role: WorkspaceRole }>(`/workspaces/${workspaceId}/membership`)
+      .then(({ data }) => { if (active) setWorkspaceRole(data.role) })
+      .catch((err: unknown) => { if (active) setError(errorMessage(err)) })
+    return () => { active = false }
   }, [workspaceId])
 
   useEffect(() => {
     if (!boardId) { setBoard(null); return }
+    if (view !== 'board') return
     let active = true
     api.get<BoardDetails>(`/boards/${boardId}`).then(({ data }) => {
       if (active) setBoard((current) => mergeNewerMoves(data, current))
     }).catch((err: unknown) => { if (active) setError(errorMessage(err)) })
     return () => { active = false }
-  }, [boardId])
+  }, [boardId, view])
 
   useEffect(() => {
     if (!boardId || !token) return
@@ -183,8 +209,27 @@ export default function App() {
       onConnect: () => {
         if (active) setLiveConnected(true)
         client.subscribe(`/topic/board/${boardId}`, (message) => {
-          const event = JSON.parse(message.body) as CardMovedEvent
+          const event = JSON.parse(message.body) as CardMovedEvent | BoardContentDeletedEvent
           if (event.boardId !== boardId) return
+          if ('type' in event) {
+            if (event.type === 'BOARD_DELETED') {
+              setBoards((current) => current.filter((item) => item.id !== event.entityId))
+              setBoardId((current) => current === event.entityId ? null : current)
+              setBoard((current) => current?.id === event.entityId ? null : current)
+              setDeleteTarget(null)
+            } else if (event.type === 'LIST_DELETED') {
+              setBoard((current) => current?.id === boardId
+                ? { ...current, lists: current.lists.filter((list) => list.id !== event.entityId) }
+                : current)
+            } else {
+              setBoard((current) => current?.id === boardId
+                ? { ...current, lists: current.lists.map((list) => ({
+                  ...list, cards: list.cards.filter((card) => card.id !== event.entityId),
+                })) }
+                : current)
+            }
+            return
+          }
           setBoard((current) => current?.id === boardId ? applyCardMove(current, {
             id: event.cardId,
             listId: event.newListId,
@@ -282,6 +327,31 @@ export default function App() {
     }
   }
 
+  async function confirmDelete() {
+    if (!deleteTarget || deleting) return
+    setDeleting(true)
+    try {
+      const { kind, id } = deleteTarget
+      await api.delete(kind === 'board' ? `/boards/${id}`
+        : kind === 'list' ? `/board-lists/${id}` : `/cards/${id}`)
+      if (kind === 'board') {
+        setBoards((current) => current.filter((item) => item.id !== id))
+        setBoardId((current) => current === id ? null : current)
+        setBoard((current) => current?.id === id ? null : current)
+      } else if (kind === 'list') {
+        setBoard((current) => current && ({ ...current,
+          lists: current.lists.filter((list) => list.id !== id) }))
+      } else {
+        setBoard((current) => current && ({ ...current,
+          lists: current.lists.map((list) => ({
+            ...list, cards: list.cards.filter((card) => card.id !== id),
+          })) }))
+      }
+      setDeleteTarget(null); setError('')
+    } catch (err) { setError(errorMessage(err)) }
+    finally { setDeleting(false) }
+  }
+
   if (!ready) return <div className="loading-screen"><span className="brand-mark">M</span> Opening Modus…</div>
   if (!token) return <AuthScreen />
 
@@ -343,6 +413,16 @@ export default function App() {
             <span className="status-dot" /> {liveConnected ? 'Live board' : 'Connecting…'}</span>}
         </header>
         {error && <div className="notice error page-notice" role="alert">{error}<button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
+        {deleteTarget && <div className="delete-confirm" role="alertdialog" aria-label={`Delete ${deleteTarget.kind}`}>
+          <span>Delete {deleteTarget.name} permanently?{deleteTarget.kind === 'board'
+            ? ` This also deletes ${deleteTarget.count} cards and all lists on this board.`
+            : deleteTarget.kind === 'list' ? ` This also deletes ${deleteTarget.count} cards.` : ''}</span>
+          <div className="delete-confirm-actions">
+            <button type="button" className="button danger" disabled={deleting} onClick={() => void confirmDelete()}>
+              {deleting ? 'Deleting…' : 'Delete permanently'}</button>
+            <button type="button" className="button subtle" disabled={deleting} onClick={() => setDeleteTarget(null)}>Cancel</button>
+          </div>
+        </div>}
         {view === 'workspace' && workspaceId && selectedWorkspace ? <WorkspaceSettings
           key={workspaceId} workspaceId={workspaceId} workspaceName={selectedWorkspace.name}
           onRenamed={(name) => setWorkspaces((current) => current.map((item) =>
@@ -361,7 +441,13 @@ export default function App() {
         }} />
         : view === 'activity' && boardId ? <BoardActivity boardId={boardId} />
         : view === 'board' && board ? <>
-          <div className="board-toolbar"><p>Move work from idea to done, together.</p><span>{board.lists.reduce((sum, list) => sum + list.cards.length, 0)} cards</span></div>
+          <div className="board-toolbar"><p>Move work from idea to done, together.</p><div className="board-toolbar-actions">
+            <span>{board.lists.reduce((sum, list) => sum + list.cards.length, 0)} cards</span>
+            {workspaceRole === 'OWNER' && <button type="button" className="delete-link" onClick={() => setDeleteTarget({
+              kind: 'board', id: board.id, name: `board “${board.name}”`,
+              count: board.lists.reduce((sum, list) => sum + list.cards.length, 0),
+            })}>Delete board</button>}
+          </div></div>
           <div className="board-columns">
             {board.lists.map((list) => <section key={list.id} className="board-column"
               onDragOver={(event) => event.preventDefault()}
@@ -371,11 +457,17 @@ export default function App() {
                 const card = board.lists.flatMap((item) => item.cards).find((item) => item.id === cardId)
                 if (card) void moveCard(card, list.id)
               }}>
-              <div className="column-heading"><span className="column-marker" /><h2>{list.name}</h2><span className="count">{list.cards.length}</span></div>
+              <div className="column-heading"><span className="column-marker" /><h2>{list.name}</h2><span className="count">{list.cards.length}</span>
+                {workspaceRole === 'OWNER' && <button type="button" className="delete-icon" aria-label={`Delete list ${list.name}`}
+                  onClick={() => setDeleteTarget({ kind: 'list', id: list.id, name: `list “${list.name}”`, count: list.cards.length })}>×</button>}
+              </div>
               <div className="card-stack">
                 {list.cards.map((card) => <article className="task-card" key={card.id} draggable
                   onDragStart={(event) => event.dataTransfer.setData('text/plain', card.id)}>
-                  <span className="card-kicker">TASK</span><h3>{card.title}</h3>
+                  <div className="card-top"><span className="card-kicker">TASK</span>
+                    <button type="button" className="delete-icon" aria-label={`Delete card ${card.title}`}
+                      onClick={() => setDeleteTarget({ kind: 'card', id: card.id, name: `card “${card.title}”`, count: 0 })}>×</button>
+                  </div><h3>{card.title}</h3>
                   <div className="card-footer"><span>#{card.id.slice(0, 6)}</span>
                     <label className="move-control">Move to <select aria-label={`Move ${card.title} to list`}
                       value={card.listId} onChange={(event) => void moveCard(card, event.target.value)}>
