@@ -2,6 +2,10 @@
 
 Modus is a collaborative Kanban application for organizing work across workspaces, boards, lists, and cards. It combines a React/TypeScript client with a Spring Boot API, PostgreSQL persistence, and live board updates over WebSocket/STOMP.
 
+## Demo
+
+[Watch the working project walkthrough](modus-demo.webm) (WebM, 28 seconds). It covers registration, workspace and board creation, cards and card moves, activity, invitations, and archive/restore. Set your video player's playback speed to **0.25×** if you want to follow each step more slowly.
+
 ## What it does
 
 - Create an account, sign in, and stay signed in with short-lived JWT access tokens and rotating refresh tokens.
