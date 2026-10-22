@@ -4,7 +4,10 @@ Modus is a collaborative Kanban application for organizing work across workspace
 
 ## Demo
 
-[Watch the working project walkthrough](modus-demo.webm) (WebM, 28 seconds). It covers registration, workspace and board creation, cards and card moves, activity, invitations, and archive/restore. Set your video player's playback speed to **0.25×** if you want to follow each step more slowly.
+<p align = "center">
+    <video src = "https://github.com/user-attachments/assets/b2380ede-a4ff-4ee8-bff5-0f4aa48798bd" width = 600 controls></video>
+</p> 
+It covers registration, workspace and board creation, cards and card moves, activity, invitations, and archive/restore. Set your video player's playback speed to **0.25×** if you want to follow each step more slowly.
 
 ## What it does
 
